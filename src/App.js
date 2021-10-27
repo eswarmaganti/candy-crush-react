@@ -1,14 +1,32 @@
 import "./App.css";
 import { useState, useEffect } from "react";
-
+import BlueCandy from "./assets/blue-candy.png";
+import YellowCandy from "./assets/yellow-candy.png";
+import OrangeCandy from "./assets/orange-candy.png";
+import PurpleCandy from "./assets/purple-candy.png";
+import GreenCandy from "./assets/green-candy.png";
+import RedCandy from "./assets/red-candy.png";
+import blank from "./assets/blank.png";
+import ScoreBoard from "./components/ScoreBoard";
+import Footer from "./components/Footer";
 const grid = 8;
 
-const colors = ["red", "blue", "green", "yellow", "orange", "purple"];
+const colors = [
+  RedCandy,
+  BlueCandy,
+  GreenCandy,
+  YellowCandy,
+  OrangeCandy,
+  PurpleCandy,
+];
 
 const App = () => {
   //state for current board arrangements
   const [currentColorArrangement, setCurrentColorArrangement] = useState([]);
 
+  const [squareBeingDragged, setSquareBeingDragged] = useState(null);
+  const [squareBeingReplaced, setSquareBeingReplaced] = useState(null);
+  const [currentScore, setCurrentScore] = useState(0);
   // function for creating board
   const createBoard = () => {
     const randomColorArrangement = [];
@@ -20,7 +38,7 @@ const App = () => {
   };
 
   const checkForColumnOfFour = () => {
-    for (let i = 0; i < 39; i++) {
+    for (let i = 0; i <= 39; i++) {
       const columnOfFour = [i, i + grid, i + grid * 2, i + grid * 3];
       const decidingColor = currentColorArrangement[i];
 
@@ -30,24 +48,31 @@ const App = () => {
         )
       ) {
         columnOfFour.forEach((square) => {
-          currentColorArrangement[square] = "";
+          currentColorArrangement[square] = blank;
         });
+        setCurrentScore(currentScore + 4);
+        return true;
       }
     }
   };
   const checkForColumnOfThree = () => {
-    for (let i = 0; i < 47; i++) {
+    for (let i = 0; i <= 47; i++) {
       const columnOfThree = [i, i + grid, i + grid * 2];
-      const decidingColor = currentColorArrangement[i];
+      const decidedColor = currentColorArrangement[i];
+      const isBlank = currentColorArrangement[i] === blank;
 
       if (
         columnOfThree.every(
-          (square) => currentColorArrangement[square] === decidingColor
+          (square) =>
+            currentColorArrangement[square] === decidedColor && !isBlank
         )
       ) {
-        columnOfThree.forEach((square) => {
-          currentColorArrangement[square] = "";
-        });
+        // setScoreDisplay((score) => score + 3);
+        columnOfThree.forEach(
+          (square) => (currentColorArrangement[square] = blank)
+        );
+        setCurrentScore(currentScore + 3);
+        return true;
       }
     }
   };
@@ -69,8 +94,10 @@ const App = () => {
         )
       ) {
         rowOfThree.forEach((square) => {
-          currentColorArrangement[square] = "";
+          currentColorArrangement[square] = blank;
         });
+        setCurrentScore(currentScore + 3);
+        return true;
       }
     }
   };
@@ -92,28 +119,109 @@ const App = () => {
         )
       ) {
         rowOfFour.forEach((square) => {
-          currentColorArrangement[square] = "";
+          currentColorArrangement[square] = blank;
         });
+        setCurrentScore(currentScore + 4);
+        return true;
       }
     }
   };
 
   const moveIntoSquareBelow = () => {
-    for (let i = 0; i < 64; i++) {
+    for (let i = 0; i < 64 - grid; i++) {
       const firstRow = [0, 1, 2, 3, 4, 5, 6, 7];
 
       const isFirstRow = firstRow.includes(i);
 
-      if (isFirstRow && currentColorArrangement[i] === "") {
+      if (isFirstRow && currentColorArrangement[i] === blank) {
         currentColorArrangement[i] =
           colors[Math.floor(Math.random() * colors.length)];
       }
 
-      if (currentColorArrangement[i + grid] === "") {
+      if (currentColorArrangement[i + grid] === blank) {
         currentColorArrangement[i + grid] = currentColorArrangement[i];
-        currentColorArrangement[i] = "";
+        currentColorArrangement[i] = blank;
       }
     }
+  };
+
+  const dragStart = (e) => {
+    // console.log("Drag START");
+
+    setSquareBeingDragged(e.target);
+  };
+  const dragDrop = (e) => {
+    console.log("Drag DROP");
+    e.preventDefault();
+
+    setSquareBeingReplaced(e.target);
+  };
+  const dragEnd = () => {
+    const squareBeingDraggedId = parseInt(
+      squareBeingDragged.getAttribute("data-id")
+    );
+    const squareBeingReplacedId = parseInt(
+      squareBeingReplaced.getAttribute("data-id")
+    );
+
+    currentColorArrangement[squareBeingReplacedId] =
+      squareBeingDragged.getAttribute("src");
+    currentColorArrangement[squareBeingDraggedId] =
+      squareBeingReplaced.getAttribute("src");
+
+    const validMoves = [
+      squareBeingDraggedId - 1,
+      squareBeingDraggedId - grid,
+      squareBeingDraggedId + 1,
+      squareBeingDraggedId + grid,
+    ];
+
+    const validMove = validMoves.includes(squareBeingReplacedId);
+    if (validMove) {
+      const isAColumnOfFour = checkForColumnOfFour();
+      const isARowOfFour = checkForRowOfFour();
+      const isAColumnOfThree = checkForColumnOfThree();
+      const isARowOfThree = checkForRowOfThree();
+      if (
+        squareBeingReplacedId &&
+        validMove &&
+        (isARowOfThree || isARowOfFour || isAColumnOfFour || isAColumnOfThree)
+      ) {
+        setSquareBeingDragged(null);
+        setSquareBeingReplaced(null);
+      } else {
+        currentColorArrangement[squareBeingReplacedId] =
+          squareBeingReplaced.getAttribute("src");
+        currentColorArrangement[squareBeingDraggedId] =
+          squareBeingDragged.getAttribute("src");
+        setCurrentColorArrangement([...currentColorArrangement]);
+      }
+    } else {
+      currentColorArrangement[squareBeingReplacedId] =
+        squareBeingReplaced.getAttribute("src");
+      currentColorArrangement[squareBeingDraggedId] =
+        squareBeingDragged.getAttribute("src");
+      setCurrentColorArrangement([...currentColorArrangement]);
+    }
+
+    // const isAColumnOfFour = checkForColumnOfFour();
+    // const isARowOfFour = checkForRowOfFour();
+    // const isAColumnOfThree = checkForColumnOfThree();
+    // const isARowOfThree = checkForRowOfThree();
+
+    // console.log(
+    //   "move",
+    //   squareBeingReplacedId,
+    //   validMoves.includes(squareBeingReplacedId)
+    // );
+    // console.log("moves", validMoves);
+    // console.log(isAColumnOfFour, isARowOfFour, isAColumnOfThree, isARowOfThree);
+    // console.log(
+    //   "condition",
+    //   squareBeingReplacedId &&
+    //     validMove &&
+    //     (isARowOfThree || isARowOfFour || isAColumnOfFour || isAColumnOfThree)
+    // );
   };
 
   // create the board when app loaded.
@@ -139,25 +247,27 @@ const App = () => {
     moveIntoSquareBelow,
     currentColorArrangement,
   ]);
-  console.log(currentColorArrangement);
   return (
     <div className="app">
+      <h1>React Candy Crush </h1>
       <div className="game">
         {currentColorArrangement.map((currentColor, index) => (
           <img
-            style={{ backgroundColor: currentColor }}
+            src={currentColor}
             key={index}
             draggable={true}
             data-id={index}
-            onDragStart={}
-            onDragOver={e=>e.preventDefault()}
-            onDragEnter={e=>e.preventDefault()}
-            onDragLeave={e=>e.preventDefault()}
-            onDrag={}
-            onDragEnd={}
+            onDragStart={dragStart}
+            onDragOver={(e) => e.preventDefault()}
+            onDragEnter={(e) => e.preventDefault()}
+            onDragLeave={(e) => e.preventDefault()}
+            onDrop={dragDrop}
+            onDragEnd={dragEnd}
           />
         ))}
       </div>
+
+      <Footer currentScore={currentScore} />
     </div>
   );
 };
